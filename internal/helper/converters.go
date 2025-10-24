@@ -96,10 +96,6 @@ func ValueToPointer[T GoTypes, VT attr.Value](in VT) *T {
 	return nil
 }
 
-type LExposers[T any] interface {
-	ToJson() T
-}
-
 func ValueToList[T GoTypes](in types.List) []T {
 	if in.IsNull() || in.IsUnknown() {
 		return nil
@@ -114,7 +110,7 @@ func ValueToList[T GoTypes](in types.List) []T {
 	return ret
 }
 
-func ValueListTransform[T any, Tf LExposers[T]](in types.List) []T {
+func ValueListTransform[T any, Tf any](in types.List, transform func(Tf) T) []T {
 	if in.IsNull() || in.IsUnknown() {
 		return nil
 	}
@@ -122,7 +118,7 @@ func ValueListTransform[T any, Tf LExposers[T]](in types.List) []T {
 	var ret []T
 	in.ElementsAs(context.Background(), &unm, true)
 	for _, i := range unm {
-		ret = append(ret, i.ToJson())
+		ret = append(ret, transform(i))
 	}
 	return ret
 }
@@ -164,26 +160,11 @@ func SetDefault[T any](in *T, defaultVal T) *T {
 	return &defaultVal
 }
 
-type VExposer interface {
-	ToValues() map[string]attr.Value
-}
-
-func Object[T VExposer](in T) types.Object {
+func Object(in any) types.Object {
 	intypes := make(map[string]attr.Type)
-	invals := in.ToValues()
+	invals := StructToValuesReflection(in)
 	for k, v := range invals {
 		intypes[k] = v.Type(context.Background())
 	}
 	return types.ObjectValueMust(intypes, invals)
 }
-
-// func GetKnownBoolPointer(in types.Bool) *bool {
-// 	if in.IsUnknown() {
-// 		return nil
-// 	}
-// 	return in.ValueBoolPointer()
-// }
-
-// func GetPointer[T any](in T) *T {
-// 	return &in
-// }

@@ -347,6 +347,21 @@ func (r *NamespaceResource) Configure(ctx context.Context, req resource.Configur
 	r.client = client
 }
 
+func (r *NamespaceResource) userMappingJson(u models.NsResUserMapping) clientgen.NamespaceServiceGetNamespacesResponseNamespaceInnerUserMappingInner {
+	return clientgen.NamespaceServiceGetNamespacesResponseNamespaceInnerUserMappingInner{
+		Domain:    u.Domain.ValueString(),
+		Attribute: helper.ValueListTransform(u.Attributes, r.userMappingAttrJson),
+		Group:     helper.ValueToList[string](u.Groups),
+	}
+}
+
+func (r *NamespaceResource) userMappingAttrJson(a models.NsResUserMappingAttr) clientgen.NamespaceServiceGetNamespacesResponseNamespaceInnerUserMappingInnerAttributeInner {
+	return clientgen.NamespaceServiceGetNamespacesResponseNamespaceInnerUserMappingInnerAttributeInner{
+		Key:   a.Key.ValueString(),
+		Value: helper.ValueToList[string](a.Value),
+	}
+}
+
 func (r *NamespaceResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	tflog.Info(ctx, "creating namespace")
 	var plan models.NamespaceResourceModel
@@ -360,14 +375,12 @@ func (r *NamespaceResource) Create(ctx context.Context, req resource.CreateReque
 
 	nsreq := r.client.GenClient.NamespaceApi.NamespaceServiceCreateNamespace(ctx)
 	namespace, _, err := nsreq.NamespaceServiceCreateNamespaceRequest(clientgen.NamespaceServiceCreateNamespaceRequest{
-		Namespace:                plan.Name.ValueString(),
-		DefaultDataServicesVpool: helper.ValueToPointer[string](plan.DefaultDataServicesVpool),
-		AllowedVpoolsList:        helper.ValueToList[string](plan.AllowedVpoolsList),
-		DisallowedVpoolsList:     helper.ValueToList[string](plan.DisallowedVpoolsList),
-		NamespaceAdmins:          helper.ValueToPointer[string](plan.NamespaceAdmins),
-		UserMapping: helper.ValueListTransform[
-			clientgen.NamespaceServiceGetNamespacesResponseNamespaceInnerUserMappingInner,
-			models.NsResUserMapping](plan.UserMapping),
+		Namespace:                    plan.Name.ValueString(),
+		DefaultDataServicesVpool:     helper.ValueToPointer[string](plan.DefaultDataServicesVpool),
+		AllowedVpoolsList:            helper.ValueToList[string](plan.AllowedVpoolsList),
+		DisallowedVpoolsList:         helper.ValueToList[string](plan.DisallowedVpoolsList),
+		NamespaceAdmins:              helper.ValueToPointer[string](plan.NamespaceAdmins),
+		UserMapping:                  helper.ValueListTransform(plan.UserMapping, r.userMappingJson),
 		IsEncryptionEnabled:          helper.ValueToPointer[bool](plan.IsEncryptionEnabled),
 		DefaultBucketBlockSize:       helper.ValueToPointer[int64](plan.DefaultBucketBlockSize),
 		ExternalGroupAdmins:          helper.ValueToPointer[string](plan.ExternalGroupAdmins),

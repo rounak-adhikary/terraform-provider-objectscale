@@ -1,10 +1,6 @@
 package models
 
 import (
-	"terraform-provider-objectscale/internal/clientgen"
-	"terraform-provider-objectscale/internal/helper"
-
-	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
@@ -171,21 +167,13 @@ type NsResUserMapping struct {
 	Groups types.List `tfsdk:"groups"`
 }
 
-func (u NsResUserMapping) ToJson() clientgen.NamespaceServiceGetNamespacesResponseNamespaceInnerUserMappingInner {
-	return clientgen.NamespaceServiceGetNamespacesResponseNamespaceInnerUserMappingInner{
-		Domain:    u.Domain.ValueString(),
-		Attribute: helper.ValueListTransform[clientgen.NamespaceServiceGetNamespacesResponseNamespaceInnerUserMappingInnerAttributeInner, NsResUserMappingAttr](u.Attributes),
-		Group:     helper.ValueToList[string](u.Groups),
-	}
-}
-
-func (u NsResUserMapping) ToValues() map[string]attr.Value {
-	return map[string]attr.Value{
-		"domain":     u.Domain,
-		"attributes": u.Attributes,
-		"groups":     u.Groups,
-	}
-}
+// func NsResUserMappingJson(u NsResUserMapping) clientgen.NamespaceServiceGetNamespacesResponseNamespaceInnerUserMappingInner {
+// 	return clientgen.NamespaceServiceGetNamespacesResponseNamespaceInnerUserMappingInner{
+// 		Domain:    u.Domain.ValueString(),
+// 		Attribute: helper.ValueListTransform(u.Attributes, NsResUserMappingAttrJson),
+// 		Group:     helper.ValueToList[string](u.Groups),
+// 	}
+// }
 
 type NsResUserMappingAttr struct {
 	// Lookup string for this key-value pair
@@ -194,16 +182,9 @@ type NsResUserMappingAttr struct {
 	Value types.List `tfsdk:"value"`
 }
 
-func (a NsResUserMappingAttr) ToJson() clientgen.NamespaceServiceGetNamespacesResponseNamespaceInnerUserMappingInnerAttributeInner {
-	return clientgen.NamespaceServiceGetNamespacesResponseNamespaceInnerUserMappingInnerAttributeInner{
-		Key:   a.Key.ValueString(),
-		Value: helper.ValueToList[string](a.Value),
-	}
-}
-
-func (a NsResUserMappingAttr) ToValues() map[string]attr.Value {
-	return map[string]attr.Value{
-		"key":   a.Key,
-		"value": a.Value,
-	}
-}
+// func NsResUserMappingAttrJson(a NsResUserMappingAttr) clientgen.NamespaceServiceGetNamespacesResponseNamespaceInnerUserMappingInnerAttributeInner {
+// 	return clientgen.NamespaceServiceGetNamespacesResponseNamespaceInnerUserMappingInnerAttributeInner{
+// 		Key:   a.Key.ValueString(),
+// 		Value: helper.ValueToList[string](a.Value),
+// 	}
+// }

@@ -16,7 +16,9 @@ TEST?=$$(go list ./... | grep -v 'vendor')
 HOSTNAME=registry.terraform.io
 NAMESPACE=dell
 NAME=objectscale
+BINARY=terraform-provider-${NAME}
 VERSION=2.0.3
+OS_ARCH=linux_amd64
 
 OPENAPI_CMD?=java -Xmx16G -jar /root/terraform-provider-powerstore/openapi-generator-cli-6.6.0.jar
 OPENAPI_GEN_DIR=internal/clientgen

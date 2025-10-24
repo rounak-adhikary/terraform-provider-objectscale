@@ -6,3 +6,6 @@ terraform-provider-objectscale.exe
 .terraform/
 .terraform.lock.hcl
 terraform-provider-objectscale_*
+.vscode
+*.env
+clientgen_utils/__pycache__

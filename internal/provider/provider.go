@@ -23,6 +23,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
@@ -48,6 +49,7 @@ type ObjectScaleProviderModel struct {
 	Username types.String `tfsdk:"username"`
 	Password types.String `tfsdk:"password"`
 	Insecure types.Bool   `tfsdk:"insecure"`
+	Timeout  types.Int64  `tfsdk:"timeout"`
 }
 
 // Metadata describes the provider arguments.
@@ -89,6 +91,14 @@ func (p *ObjectScaleProvider) Schema(ctx context.Context, req provider.SchemaReq
 				Description:         "whether to skip SSL validation",
 				Required:            true,
 			},
+			"timeout": schema.Int64Attribute{
+				MarkdownDescription: "The timeout in seconds",
+				Description:         "The timeout in seconds",
+				Required:            true,
+				Validators: []validator.Int64{
+					int64validator.AtLeast(1),
+				},
+			},
 		},
 	}
 }
@@ -109,6 +119,7 @@ func (p *ObjectScaleProvider) Configure(ctx context.Context, req provider.Config
 		data.Username.ValueString(),
 		data.Password.ValueString(),
 		data.Insecure.ValueBool(),
+		data.Timeout.ValueInt64(),
 	)
 
 	if err != nil {

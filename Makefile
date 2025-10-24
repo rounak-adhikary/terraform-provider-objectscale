@@ -18,39 +18,28 @@ NAMESPACE=dell
 NAME=objectscale
 VERSION=2.0.3
 
-ifeq ($(OS),Windows_NT)
-    MIRROR_DIR_PREFIX = $(APPDATA)/terraform.d
-    LIB_NAME = objectscale_client.dll
-    BINARY = terraform-provider-${NAME}.exe
-    OS_ARCH = windows_amd64
-else
-    OS_NAME := $(shell uname -s)
-    ifeq ($(OS_NAME),Darwin)
-        MIRROR_DIR_PREFIX = ~/.terraform.d
-        LIB_NAME = libobjectscale_client.dylib
-        BINARY = terraform-provider-${NAME}
-        OS_ARCH = darwin_amd64
-	else
-        MIRROR_DIR_PREFIX = ~/.terraform.d
-        LIB_NAME = libobjectscale_client.so
-        BINARY = terraform-provider-${NAME}
-        OS_ARCH = linux_amd64
-    endif
-endif
+OPENAPI_CMD?=java -Xmx16G -jar /root/terraform-provider-powerstore/openapi-generator-cli-6.6.0.jar
+OPENAPI_GEN_DIR=internal/clientgen
 
 default: install
 
 build:
-	go mod download
-	CGO_ENABLED=1 go build -o ${BINARY}
+	go build -o ${BINARY}
 
-install: uninstall build
-	mkdir -p ${MIRROR_DIR_PREFIX}/plugins/${HOSTNAME}/${NAMESPACE}/${NAME}/${VERSION}/${OS_ARCH}
-	mv ${BINARY} ${MIRROR_DIR_PREFIX}/plugins/${HOSTNAME}/${NAMESPACE}/${NAME}/${VERSION}/${OS_ARCH}
-	cp ./objectscale-client/target/release/${LIB_NAME} ${MIRROR_DIR_PREFIX}/plugins/${HOSTNAME}/${NAMESPACE}/${NAME}/${VERSION}/${OS_ARCH}
+install: build
+	rm -rfv ~/.terraform.d/plugins/${HOSTNAME}/${NAMESPACE}/${NAME}/${VERSION}/${OS_ARCH}
+	find examples -type d -name ".terraform" -exec rm -rfv "{}" +;
+	find examples -type f -name "trace.*" -delete
+	find examples -type f -name "*.tfstate" -delete
+	find examples -type f -name "*.hcl" -delete
+	find examples -type f -name "*.backup" -delete
+	rm -rf trace.*
+	
+	mkdir -p ~/.terraform.d/plugins/${HOSTNAME}/${NAMESPACE}/${NAME}/${VERSION}/${OS_ARCH}
+	mv ${BINARY} ~/.terraform.d/plugins/${HOSTNAME}/${NAMESPACE}/${NAME}/${VERSION}/${OS_ARCH}
 
 uninstall:
-	rm -rfv ${MIRROR_DIR_PREFIX}/plugins/${HOSTNAME}/${NAMESPACE}/${NAME}/${VERSION}/${OS_ARCH}
+	rm -rfv ~/.terraform.d/plugins/${HOSTNAME}/${NAMESPACE}/${NAME}/${VERSION}/${OS_ARCH}
 	find examples -type d -name ".terraform" -exec rm -rfv "{}" +;
 	find examples -type f -name "trace.*" -delete
 	find examples -type f -name "*.tfstate" -delete
@@ -58,22 +47,13 @@ uninstall:
 	find examples -type f -name "*.backup" -delete
 	rm -rf trace.*
 
-client-build: clean
-	git clone -b ecs_4_0 https://github.com/vangork/objectscale-client.git
-	cd ./objectscale-client/c && cargo build --release
+build_spec:
+	python3 clientgen_utils/main.py --input clientgen_utils/openapi_specs/ecs_metadata_openapi_4.0_fixed.json --output clientgen_utils/openapi_specs/ecs_metadata_openapi_4.0_filtered.json
 
-clean:
-	sudo rm -f ${BINARY}
-	sudo rm -f terraform-provider-${NAME}_*
-	sudo rm -rf ./objectscale-client
-
-docker-build:
-	git clone -b ecs_4_0 https://github.com/vangork/objectscale-client.git
-	docker run --rm -it -v ./objectscale-client:/io -w /io/c ghcr.io/rust-cross/rust-musl-cross:x86_64-musl cargo rustc --crate-type=staticlib --release
-	docker run --rm -it -v .:/src -w /src -e CC="gcc" -e CGO_LDFLAGS="-L/src/objectscale-client/target/x86_64-unknown-linux-musl/release/" golang:1.23-alpine sh -c "apk add --no-cache musl-dev build-base && go build -ldflags=\"-linkmode external -extldflags '-static'\" -o ${BINARY}"
-
-release: clean docker-build
-	cp terraform-provider-objectscale terraform-provider-${NAME}_v${VERSION}
-	zip -j terraform-provider-${NAME}_${VERSION}_${OS_ARCH}.zip terraform-provider-${NAME}_v${VERSION}
-	cp terraform-registry-manifest.json terraform-provider-${NAME}_${VERSION}_manifest.json
-	shasum -a 256 *.zip terraform-provider-${NAME}_${VERSION}_manifest.json > terraform-provider-${NAME}_${VERSION}_SHA256SUMS
+build_client: build_spec
+	${OPENAPI_CMD} generate -i clientgen_utils/openapi_specs/ecs_metadata_openapi_4.0_filtered.json \
+		-g go --type-mappings integer+unsigned64=uint64  -o ${OPENAPI_GEN_DIR} \
+		--global-property apis,models,supportingFiles=client.go:README.md:configuration.go:response.go:utils.go,modelTests=false,apiTests=false,modelDocs=false \
+		-c /root/terraform-provider-objectscale/clientgen_utils/config.yaml
+		
+	cd ${OPENAPI_GEN_DIR} && goimports -w .

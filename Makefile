@@ -22,6 +22,9 @@ OS_ARCH=linux_amd64
 
 OPENAPI_CMD?=java -Xmx16G -jar /root/terraform-provider-powerstore/openapi-generator-cli-6.6.0.jar
 OPENAPI_GEN_DIR=internal/clientgen
+OPENAPI_SOURCE_DIR=clientgen_utils/openapi_specs
+OPENAPI_FULL_PATH=${OPENAPI_SOURCE_DIR}/ecs_metadata_openapi_4.1.json
+OPENAPI_FILTERED_PATH=${OPENAPI_SOURCE_DIR}/ecs_metadata_openapi_4.1_filtered.json
 
 default: install
 
@@ -50,12 +53,12 @@ uninstall:
 	rm -rf trace.*
 
 build_spec:
-	python3 clientgen_utils/main.py --input clientgen_utils/openapi_specs/ecs_metadata_openapi_4.0_fixed.json --output clientgen_utils/openapi_specs/ecs_metadata_openapi_4.0_filtered.json
+	python3 clientgen_utils/main.py --input ${OPENAPI_FULL_PATH} --output ${OPENAPI_FILTERED_PATH}
 
 build_client: build_spec
-	${OPENAPI_CMD} generate -i clientgen_utils/openapi_specs/ecs_metadata_openapi_4.0_filtered.json \
+	${OPENAPI_CMD} generate -i ${OPENAPI_FILTERED_PATH} \
 		-g go --type-mappings integer+unsigned64=uint64  -o ${OPENAPI_GEN_DIR} \
 		--global-property apis,models,supportingFiles=client.go:README.md:configuration.go:response.go:utils.go,modelTests=false,apiTests=false,modelDocs=false \
-		-c /root/terraform-provider-objectscale/clientgen_utils/config.yaml
+		-c clientgen_utils/config.yaml
 		
 	cd ${OPENAPI_GEN_DIR} && goimports -w .

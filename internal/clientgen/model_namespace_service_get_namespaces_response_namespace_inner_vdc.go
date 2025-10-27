@@ -13,7 +13,6 @@ package clientgen
 // NamespaceServiceGetNamespacesResponseNamespaceInnerVdc struct for NamespaceServiceGetNamespacesResponseNamespaceInnerVdc
 type NamespaceServiceGetNamespacesResponseNamespaceInnerVdc struct {
 	// ECS Id of the related object
-	Id *string `json:"id,omitempty"`
-	// Hyperlink to the related object
-	Link *string `json:"link,omitempty"`
+	Id   *string                                                     `json:"id,omitempty"`
+	Link *NamespaceServiceGetNamespacesResponseNamespaceInnerVdcLink `json:"link,omitempty"`
 }

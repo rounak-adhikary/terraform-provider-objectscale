@@ -95,12 +95,20 @@
 			"description": "Bucket operations"
 		},
 		{
+			"name": "Bucket Notification Event",
+			"description": "Bucket Notification Event operations"
+		},
+		{
 			"name": "Call Home",
 			"description": "Call Home operations"
 		},
 		{
 			"name": "Capacity Info",
 			"description": "Capacity Info operations"
+		},
+		{
+			"name": "Compression Config",
+			"description": "Compression Config operations"
 		},
 		{
 			"name": "Configuration",
@@ -235,10 +243,6 @@
 			"description": "S3 Bucket Lifecycle Operation operations"
 		},
 		{
-			"name": "S3 Bucket List Fanout Operations",
-			"description": "S3 Bucket List Fanout Operations operations"
-		},
-		{
 			"name": "S3 Bucket List Uploads Operations",
 			"description": "S3 Bucket List Uploads Operations operations"
 		},
@@ -249,6 +253,14 @@
 		{
 			"name": "S3 Bucket Lock Configuration Operations",
 			"description": "S3 Bucket Lock Configuration Operations operations"
+		},
+		{
+			"name": "S3 Bucket Notification Event Operations",
+			"description": "S3 Bucket Notification Event Operations operations"
+		},
+		{
+			"name": "S3 Bucket Notification Operations",
+			"description": "S3 Bucket Notification Operations operations"
 		},
 		{
 			"name": "S3 Bucket Object Lock Operations",
@@ -299,6 +311,10 @@
 			"description": "S3 Object Acl Operations operations"
 		},
 		{
+			"name": "S3 Object Attributes Operations",
+			"description": "S3 Object Attributes Operations operations"
+		},
+		{
 			"name": "S3 Object Init Uploads Operations",
 			"description": "S3 Object Init Uploads Operations operations"
 		},
@@ -345,6 +361,10 @@
 		{
 			"name": "Secret Key",
 			"description": "Secret Key operations"
+		},
+		{
+			"name": "Sed Handler",
+			"description": "Sed Handler operations"
 		},
 		{
 			"name": "Sensor",
@@ -437,6 +457,10 @@
 		{
 			"name": "V D C Keystore",
 			"description": "V D C Keystore operations"
+		},
+		{
+			"name": "Webhook Configuration",
+			"description": "Webhook Configuration operations"
 		},
 		{
 			"name": "Zone Info",
@@ -1126,13 +1150,14 @@
 									"properties": {
 										"rel": {
 											"type": "string",
-											"description": "Relationship of the Hyperlink"
+											"description": "Relationship type of the hyperlink"
 										},
 										"href": {
 											"type": "string",
-											"description": "Hyperlink to the details for this resource"
+											"description": "Hyperlink URL to the related resource"
 										}
-									}
+									},
+									"description": "Hyperlink to the details for this resource"
 								},
 								"creation_time": {
 									"type": "integer",
@@ -1160,7 +1185,17 @@
 											"description": "ECS Id of the related object"
 										},
 										"link": {
-											"type": "string",
+											"type": "object",
+											"properties": {
+												"rel": {
+													"type": "string",
+													"description": "Relationship type of the hyperlink"
+												},
+												"href": {
+													"type": "string",
+													"description": "Hyperlink URL to the related resource"
+												}
+											},
 											"description": "Hyperlink to the related object"
 										}
 									}
@@ -1361,13 +1396,14 @@
 						"properties": {
 							"rel": {
 								"type": "string",
-								"description": "Relationship of the Hyperlink"
+								"description": "Relationship type of the hyperlink"
 							},
 							"href": {
 								"type": "string",
-								"description": "Hyperlink to the details for this resource"
+								"description": "Hyperlink URL to the related resource"
 							}
-						}
+						},
+						"description": "Hyperlink to the details for this resource"
 					},
 					"creation_time": {
 						"type": "integer",
@@ -1395,7 +1431,17 @@
 								"description": "ECS Id of the related object"
 							},
 							"link": {
-								"type": "string",
+								"type": "object",
+								"properties": {
+									"rel": {
+										"type": "string",
+										"description": "Relationship type of the hyperlink"
+									},
+									"href": {
+										"type": "string",
+										"description": "Hyperlink URL to the related resource"
+									}
+								},
 								"description": "Hyperlink to the related object"
 							}
 						}
@@ -1825,13 +1871,14 @@
 						"properties": {
 							"rel": {
 								"type": "string",
-								"description": "Relationship of the Hyperlink"
+								"description": "Relationship type of the hyperlink"
 							},
 							"href": {
 								"type": "string",
-								"description": "Hyperlink to the details for this resource"
+								"description": "Hyperlink URL to the related resource"
 							}
-						}
+						},
+						"description": "Hyperlink to the details for this resource"
 					},
 					"creation_time": {
 						"type": "integer",
@@ -1859,7 +1906,17 @@
 								"description": "ECS Id of the related object"
 							},
 							"link": {
-								"type": "string",
+								"type": "object",
+								"properties": {
+									"rel": {
+										"type": "string",
+										"description": "Relationship type of the hyperlink"
+									},
+									"href": {
+										"type": "string",
+										"description": "Hyperlink URL to the related resource"
+									}
+								},
 								"description": "Hyperlink to the related object"
 							}
 						}

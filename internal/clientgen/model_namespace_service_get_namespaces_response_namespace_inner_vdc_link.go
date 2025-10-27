@@ -10,8 +10,8 @@ API version: 4.0.0
 
 package clientgen
 
-// NamespaceServiceGetNamespacesResponseNamespaceInnerLink Hyperlink to the details for this resource
-type NamespaceServiceGetNamespacesResponseNamespaceInnerLink struct {
+// NamespaceServiceGetNamespacesResponseNamespaceInnerVdcLink Hyperlink to the related object
+type NamespaceServiceGetNamespacesResponseNamespaceInnerVdcLink struct {
 	// Relationship type of the hyperlink
 	Rel *string `json:"rel,omitempty"`
 	// Hyperlink URL to the related resource

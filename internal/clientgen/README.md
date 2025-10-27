@@ -99,6 +99,7 @@ Class | Method | HTTP request | Description
  - [NamespaceServiceGetNamespacesResponseNamespaceInnerUserMappingInner](docs/NamespaceServiceGetNamespacesResponseNamespaceInnerUserMappingInner.md)
  - [NamespaceServiceGetNamespacesResponseNamespaceInnerUserMappingInnerAttributeInner](docs/NamespaceServiceGetNamespacesResponseNamespaceInnerUserMappingInnerAttributeInner.md)
  - [NamespaceServiceGetNamespacesResponseNamespaceInnerVdc](docs/NamespaceServiceGetNamespacesResponseNamespaceInnerVdc.md)
+ - [NamespaceServiceGetNamespacesResponseNamespaceInnerVdcLink](docs/NamespaceServiceGetNamespacesResponseNamespaceInnerVdcLink.md)
  - [NamespaceServiceUpdateNamespaceRequest](docs/NamespaceServiceUpdateNamespaceRequest.md)
 
 

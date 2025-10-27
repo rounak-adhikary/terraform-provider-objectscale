@@ -33,6 +33,13 @@ func TfString[T ~string](in *T) types.String {
 	return types.StringValue(string(*in))
 }
 
+func TfStringNN[T ~string](in *T) types.String {
+	if in == nil {
+		return types.StringValue("")
+	}
+	return types.StringValue(string(*in))
+}
+
 // TfStringFromPTime - Converts *time.Time to types.String, returns types.StringNull if input is nil
 func TfStringFromPTime(in *time.Time) types.String {
 	if in == nil {
@@ -49,10 +56,24 @@ func TfBool(in *bool) types.Bool {
 	return types.BoolValue(*in)
 }
 
+func TfBoolNN(in *bool) types.Bool {
+	if in == nil {
+		return types.BoolValue(false)
+	}
+	return types.BoolValue(*in)
+}
+
 // TfInt64 - Converts *int64 to types.Int64, returns types.Int64Null if input is nil
 func TfInt64(in *int64) types.Int64 {
 	if in == nil {
 		return types.Int64Null()
+	}
+	return types.Int64Value(*in)
+}
+
+func TfInt64NN(in *int64) types.Int64 {
+	if in == nil {
+		return types.Int64Value(0)
 	}
 	return types.Int64Value(*in)
 }

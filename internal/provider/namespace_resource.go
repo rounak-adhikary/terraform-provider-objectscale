@@ -29,8 +29,10 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64default"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listdefault"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
@@ -119,12 +121,14 @@ func (r *NamespaceResource) Schema(ctx context.Context, req resource.SchemaReque
 			"allowed_vpools_list": schema.ListAttribute{
 				Description:         "List of replication group that are allowed access to namespace.",
 				MarkdownDescription: "List of replication group that are allowed access to namespace.",
+				Optional:            true,
 				Computed:            true,
 				ElementType:         types.StringType,
 			},
 			"disallowed_vpools_list": schema.ListAttribute{
 				Description:         "List of replication group that are not allowed access to namespace.",
 				MarkdownDescription: "List of replication group that are not allowed access to namespace.",
+				Optional:            true,
 				Computed:            true,
 				ElementType:         types.StringType,
 			},
@@ -195,6 +199,9 @@ func (r *NamespaceResource) Schema(ctx context.Context, req resource.SchemaReque
 				Computed:            true,
 				Optional:            true,
 				Default:             booldefault.StaticBool(false),
+				PlanModifiers: []planmodifier.Bool{
+					boolplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"default_bucket_block_size": schema.Int64Attribute{
 				Description:         "Default bucket quota size. Default: -1. Updatable.",
@@ -230,8 +237,11 @@ func (r *NamespaceResource) Schema(ctx context.Context, req resource.SchemaReque
 				Optional:            true,
 				Computed:            true,
 				Default:             booldefault.StaticBool(false),
+				PlanModifiers: []planmodifier.Bool{
+					boolplanmodifier.UseStateForUnknown(),
+				},
 			},
-			// TODO : Quotas
+			// TODO : Quotas resource?
 			// "notification_size": schema.Int64Attribute{
 			// 	Description:         "Notification Size in GB. Default: -1. Updatable.",
 			// 	MarkdownDescription: "Notification Size in GB. Default: -1. Updatable.",
@@ -362,19 +372,8 @@ func (r *NamespaceResource) userMappingAttrJson(a models.NsResUserMappingAttr) c
 	}
 }
 
-func (r *NamespaceResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	tflog.Info(ctx, "creating namespace")
-	var plan models.NamespaceResourceModel
-
-	// Read Terraform plan data into the model
-	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
-
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	nsreq := r.client.GenClient.NamespaceApi.NamespaceServiceCreateNamespace(ctx)
-	namespace, _, err := nsreq.NamespaceServiceCreateNamespaceRequest(clientgen.NamespaceServiceCreateNamespaceRequest{
+func (r *NamespaceResource) modelToJson(plan models.NamespaceResourceModel) clientgen.NamespaceServiceCreateNamespaceRequest {
+	return clientgen.NamespaceServiceCreateNamespaceRequest{
 		Namespace:                    plan.Name.ValueString(),
 		DefaultDataServicesVpool:     helper.ValueToPointer[string](plan.DefaultDataServicesVpool),
 		AllowedVpoolsList:            helper.ValueToList[string](plan.AllowedVpoolsList),
@@ -389,7 +388,23 @@ func (r *NamespaceResource) Create(ctx context.Context, req resource.CreateReque
 		ComplianceEnabled:            helper.ValueToPointer[bool](plan.IsComplianceEnabled),
 		DefaultAuditDeleteExpiration: helper.ValueToPointer[int64](plan.DefaultAuditDeleteExpiration),
 		RootUserPassword:             helper.ValueToPointer[string](plan.RootUserPassword),
-	}).Execute()
+	}
+}
+
+func (r *NamespaceResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
+	tflog.Info(ctx, "creating namespace")
+	var plan models.NamespaceResourceModel
+
+	// Read Terraform plan data into the model
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
+
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	nsreq := r.client.GenClient.NamespaceApi.NamespaceServiceCreateNamespace(ctx)
+	namespace, _, err := nsreq.NamespaceServiceCreateNamespaceRequest(
+		r.modelToJson(plan)).Execute()
 	if err != nil {
 		resp.Diagnostics.AddError("Error creating namespace", err.Error())
 		return
@@ -447,12 +462,12 @@ func (r *NamespaceResource) getModel(
 		IsEncryptionEnabled = true
 	}
 	return models.NamespaceResourceModel{
-		Id:                       helper.TfString(namespace.Id),
-		Name:                     helper.TfString(namespace.Name),
-		DefaultDataServicesVpool: helper.TfString(namespace.DefaultDataServicesVpool),
+		Id:                       helper.TfStringNN(namespace.Id),
+		Name:                     helper.TfStringNN(namespace.Name),
+		DefaultDataServicesVpool: helper.TfStringNN(namespace.DefaultDataServicesVpool),
 		AllowedVpoolsList:        helper.ListNotNull(namespace.AllowedVpoolsList, types.StringValue),
 		DisallowedVpoolsList:     helper.ListNotNull(namespace.DisallowedVpoolsList, types.StringValue),
-		NamespaceAdmins:          helper.TfString(namespace.NamespaceAdmins),
+		NamespaceAdmins:          helper.TfStringNN(namespace.NamespaceAdmins),
 		UserMapping: helper.ListNotNull(namespace.UserMapping,
 			func(v clientgen.NamespaceServiceGetNamespacesResponseNamespaceInnerUserMappingInner) types.Object {
 				return helper.Object(models.NsResUserMapping{
@@ -467,81 +482,109 @@ func (r *NamespaceResource) getModel(
 					Groups: helper.ListNotNull(v.Group, types.StringValue),
 				})
 			}),
-		IsEncryptionEnabled:          helper.TfBool(&IsEncryptionEnabled),
-		DefaultBucketBlockSize:       helper.TfInt64(namespace.DefaultBucketBlockSize),
-		ExternalGroupAdmins:          helper.TfString(namespace.ExternalGroupAdmins),
-		IsStaleAllowed:               helper.TfBool(namespace.IsStaleAllowed),
-		IsObjectLockWithAdoAllowed:   helper.TfBool(namespace.IsObjectLockWithAdoAllowed),
-		IsComplianceEnabled:          helper.TfBool(namespace.IsComplianceEnabled),
-		DefaultAuditDeleteExpiration: helper.TfInt64(namespace.DefaultAuditDeleteExpiration),
-		RootUserName:                 helper.TfString(namespace.RootUserName),
+		IsEncryptionEnabled:          helper.TfBoolNN(&IsEncryptionEnabled),
+		DefaultBucketBlockSize:       helper.TfInt64NN(namespace.DefaultBucketBlockSize),
+		ExternalGroupAdmins:          helper.TfStringNN(namespace.ExternalGroupAdmins),
+		IsStaleAllowed:               helper.TfBoolNN(namespace.IsStaleAllowed),
+		IsObjectLockWithAdoAllowed:   helper.TfBoolNN(namespace.IsObjectLockWithAdoAllowed),
+		IsComplianceEnabled:          helper.TfBoolNN(namespace.IsComplianceEnabled),
+		DefaultAuditDeleteExpiration: helper.TfInt64NN(namespace.DefaultAuditDeleteExpiration),
+		RootUserName:                 helper.TfStringNN(namespace.RootUserName),
 		RootUserPassword:             rootpwd,
 	}
+}
+
+// computes the difference between two string sets (lists)
+func (r *NamespaceResource) vpoolDiff(first, second []string) []string {
+	var diff []string
+	smap := make(map[string]struct{}, len(second))
+	for _, v := range second {
+		smap[v] = struct{}{}
+	}
+	for _, v := range first {
+		if _, ok := smap[v]; !ok {
+			diff = append(diff, v)
+		}
+	}
+	return diff
 }
 
 func (r *NamespaceResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
 	tflog.Info(ctx, "updating namespace")
 	// TODO: Add update logic
-	// var plan models.NamespaceResourceModel
+	var plan, state models.NamespaceResourceModel
 
-	// // Read Terraform plan data into the model
-	// resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
+	// Read Terraform plan and state data into the models
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
+	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 
-	// if resp.Diagnostics.HasError() {
-	// 	return
-	// }
+	// To prevent the non-updatable fields from being changed
+	if !plan.Name.Equal(state.Name) ||
+		!plan.IsComplianceEnabled.Equal(state.IsComplianceEnabled) ||
+		!plan.IsEncryptionEnabled.Equal(state.IsEncryptionEnabled) {
+		resp.Diagnostics.AddError("Error updating namespace", "Fields of `name`, `is_compliance_enabled` and `is_encryption_enabled` are not updatable")
+		return
+	}
 
-	// namespace, err := helper.BuildNamespaceFromPlan(ctx, &plan)
-	// if err != nil {
-	// 	resp.Diagnostics.AddError("Error building namespace from plan", err.Error())
-	// 	return
-	// }
-	// // To update the Id whose value does not exist in the plan from the state.
-	// // For the rest of the non-existing fields' value in the plan won't impact the update result,
-	// // as the update API would check the difference of the local value and remote value internally,
-	// // it would use the Id to retrieve the remote value,
-	// // and the non change value won't trigger the update
-	// // For the update API, it should use the same get API to get the remote value,
-	// // so just to refer get API definition to make sure all the required fields have the value assigned
-	// var data models.NamespaceEntity
-	// resp.Diagnostics.Append(req.State.Get(ctx, &data)...)
-	// if resp.Diagnostics.HasError() {
-	// 	return
-	// }
-	// namespace.Id = data.Id.ValueString()
+	planJson, stateJson := r.modelToJson(plan), r.modelToJson(state)
 
-	// // To prevent the non-updatable fields from being changed
-	// if namespace.Name != data.Name.ValueString() ||
-	// 	namespace.IsComplianceEnabled != data.IsComplianceEnabled.ValueBool() ||
-	// 	namespace.IsEncryptionEnabled != data.IsEncryptionEnabled.ValueBool() {
-	// 	resp.Diagnostics.AddError("Error updating namespace", "Fields of `name`, `is_compliance_enabled` and `is_encryption_enabled` are not updatable")
-	// 	return
-	// }
+	var currpass, newpass *string
+	if planJson.RootUserPassword != nil {
+		currpass = planJson.RootUserPassword
+		if stateJson.RootUserPassword == nil {
+			resp.Diagnostics.AddError(
+				"Error updating namespace",
+				"Field `root_user_password` state is missing")
+		}
+		newpass = planJson.RootUserPassword
+	}
 
-	// _, err = r.client.ManagementClient.UpdateNamespace(namespace)
-	// if err != nil {
-	// 	resp.Diagnostics.AddError("Error updating namespace", err.Error())
-	// 	return
-	// }
+	ureq := r.client.GenClient.NamespaceApi.NamespaceServiceUpdateNamespace(ctx, state.Id.ValueString())
+	ureq = ureq.NamespaceServiceUpdateNamespaceRequest(clientgen.NamespaceServiceUpdateNamespaceRequest{
+		DefaultDataServicesVpool: planJson.DefaultDataServicesVpool,
+		// vpools
+		VpoolsAddedToAllowedVpoolsList: r.vpoolDiff(
+			planJson.AllowedVpoolsList,
+			stateJson.AllowedVpoolsList),
+		VpoolsRemovedFromAllowedVpoolsList: r.vpoolDiff(
+			stateJson.AllowedVpoolsList,
+			planJson.AllowedVpoolsList),
+		VpoolsAddedToDisallowedVpoolsList: r.vpoolDiff(
+			planJson.DisallowedVpoolsList,
+			stateJson.DisallowedVpoolsList),
 
-	// namespace, err = r.client.ManagementClient.GetNamespace(namespace.Id)
+		NamespaceAdmins:              planJson.NamespaceAdmins,
+		UserMapping:                  planJson.UserMapping,
+		DefaultBucketBlockSize:       planJson.DefaultBucketBlockSize,
+		ExternalGroupAdmins:          planJson.ExternalGroupAdmins,
+		IsStaleAllowed:               planJson.IsStaleAllowed,
+		IsObjectLockWithAdoAllowed:   planJson.IsObjectLockWithAdoAllowed,
+		DefaultAuditDeleteExpiration: planJson.DefaultAuditDeleteExpiration,
 
-	// if err != nil {
-	// 	resp.Diagnostics.AddError("Error reading namespace", err.Error())
-	// 	return
-	// }
+		// root user password
+		CurrentRootUserPassword: currpass,
+		NewRootUserPassword:     newpass,
+	})
+	_, _, err := ureq.Execute()
+	if err != nil {
+		resp.Diagnostics.AddError("Error updating namespace", err.Error())
+		return
+	}
 
-	// err = helper.CopyFields(ctx, namespace, &data)
-	// if err != nil {
-	// 	resp.Diagnostics.AddError(
-	// 		"Error converting read namespace",
-	// 		err.Error(),
-	// 	)
-	// 	return
-	// }
+	namespace, _, err := r.client.GenClient.NamespaceApi.NamespaceServiceGetNamespace(ctx, state.Id.ValueString()).Execute()
 
-	// // Save updated data into Terraform state
-	// resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+	if err != nil {
+		resp.Diagnostics.AddError("Error reading namespace", err.Error())
+		return
+	}
+
+	data := r.getModel(namespace, types.StringNull())
+
+	// Save updated data into Terraform state
+	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
 func (r *NamespaceResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {

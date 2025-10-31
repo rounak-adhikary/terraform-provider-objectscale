@@ -20,7 +20,7 @@ BINARY=terraform-provider-${NAME}
 VERSION=2.0.3
 OS_ARCH=linux_amd64
 
-OPENAPI_CMD?=java -Xmx16G -jar /root/terraform-provider-powerstore/openapi-generator-cli-6.6.0.jar
+OPENAPI_CMD?=java -Xmx16G -jar openapi-generator-cli-6.6.0.jar
 OPENAPI_GEN_DIR=internal/clientgen
 OPENAPI_SOURCE_DIR=clientgen_utils/openapi_specs
 OPENAPI_FULL_PATH=${OPENAPI_SOURCE_DIR}/ecs_metadata_openapi_4.1.json
